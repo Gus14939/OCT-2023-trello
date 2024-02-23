@@ -5,9 +5,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from init import db
 from models.card import Card, cards_schema, card_schema
+from controllers.comment_controller import comments_bp
 
 
 cards_bp = Blueprint('cards', __name__, url_prefix='/cards')
+cards_bp.register_blueprint(comments_bp)
 
 # route to SEE all cards
 @cards_bp.route('/')
