@@ -24,7 +24,7 @@ def create_comment(card_id):
         comment = Comment(
             message = body_data.get('message'),
             user_id = get_jwt_identity(),
-            card = card
+            card = card 
         )
         db.session.add(comment)
         db.session.commit()
