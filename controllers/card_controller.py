@@ -5,6 +5,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from init import db
 from models.card import Card, cards_schema, card_schema
+from models.user import User
 from controllers.comment_controller import comments_bp
 
 
@@ -54,7 +55,12 @@ def create_card():
 # The D - delete part of CRUD
 # http://localhost:8888/cards/<4>    <- Dynamic || DELETE
 @cards_bp.route('/<int:card_id>', methods=["DELETE"])
+@jwt_required()
 def delete_card(card_id):
+    # check user's admin status
+    is_admin = is_user_admin()
+    if not is_admin:
+        return {"error": "Not authorised to delete a card"}, 403
     # get the card from the db with id = card_id
     stmt = db.select(Card).where(Card.id == card_id) # using where as filter by
             # stmt = db.select(Card).filter_by(email=body_data.get("email"))
@@ -74,6 +80,7 @@ def delete_card(card_id):
 # The U - update part of CRUD
 # http://localhost:8888/cards/<4>   <- Dynamic || PUT PATCH
 @cards_bp.route('/<int:card_id>', methods=["PUT", "PATCH"])
+@jwt_required()
 def update_card(card_id):
     # Get the data to be updated from the doby of the request
     body_data = card_schema.load(request.get_json(), partial=True)
@@ -82,6 +89,8 @@ def update_card(card_id):
     card = db.session.scalar(stmt)
     # if card
     if card:
+        if str(card.user_id) != get_jwt_identity():
+            return {"error": "Only the owner of this card can edit"}, 403
         # update fields  
         card.title = body_data.get('title') or card.title
         card.description = body_data.get('description') or card.description
@@ -95,3 +104,9 @@ def update_card(card_id):
     else:
         # return error msg
         return {"error": f"Card with id {card_id} not found"}, 404
+    
+def is_user_admin():
+    user_id = get_jwt_identity()
+    stmt = db.select(User).filter_by(id=user_id)
+    user = db.session.scalar(stmt)
+    return user.is_admin
